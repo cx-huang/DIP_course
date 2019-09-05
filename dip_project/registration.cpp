@@ -166,3 +166,77 @@ void Reg2D::Run(void)
 	cv::addWeighted(warp_img_dot, alpha, dst_img_dot, beta, 0.0, blend_img);
 	cv::imwrite("output\\project1\\blend_img.png", blend_img);
 }
+
+Reg3D::Reg3D(std::string src_file_name, std::string dst_file_name)
+{
+	/* read data from txt file */
+	std::ifstream fp;
+	fp.open(src_file_name);
+	if (!fp.is_open())
+	{
+		std::cout << "Cannot open file #" << src_file_name << "#" << std::endl;
+		return;
+	}
+	while (!fp.eof())
+	{
+		char buffer[64];
+		float x, y, z;
+		fp.getline(buffer, 64);
+		sscanf_s(buffer, "%f, %f, %f", &x, &y, &z, 30);
+		//std::cout << "x:" << x << "	y:" << y << std::endl;
+		Eigen::Vector3f tmp(x, y, z);
+		_pnt_3d_A.push_back(tmp);
+	}
+	/*std::cout << _pnt_3d_A.size() << std::endl;
+	for (int i = 0; i < _pnt_3d_A.size(); i++)
+	{
+		std::cout << _pnt_3d_A[i].x() << " " << _pnt_3d_A[i].y() << " " << _pnt_3d_A[i].z() << std::endl;
+	}*/
+	fp.close();
+
+	fp.open(dst_file_name);
+	if (!fp.is_open())
+	{
+		std::cout << "Cannot open file #" << dst_file_name << "#" << std::endl;
+		return;
+	}
+	while (!fp.eof())
+	{
+		char buffer[64];
+		float x, y, z;
+		fp.getline(buffer, 64);
+		sscanf_s(buffer, "%f, %f, %f", &x, &y, &z, 30);
+		//std::cout << "x:" << x << "	y:" << y << std::endl;
+		Eigen::Vector3f tmp(x, y, z);
+		_pnt_3d_B.push_back(tmp);
+	}
+	/*std::cout << _pnt_3d_B.size() << std::endl;
+	for (int i = 0; i < _pnt_3d_B.size(); i++)
+	{
+		std::cout << _pnt_3d_B[i].x() << " " << _pnt_3d_B[i].y() << " " << _pnt_3d_B[i].z() << std::endl;
+	}*/
+	fp.close();
+	/* create directory for output */
+	_mkdir("output\\project2");
+	/* initialize matrix K */
+	_K(0, 0) = 746.07;
+	_K(0, 1) = 0;
+	_K(0, 2) = 493.94;
+	_K(1, 0) = 0;
+	_K(1, 1) = 743.92;
+	_K(1, 2) = 488.76;
+	_K(2, 0) = 0;
+	_K(2, 1) = 0;
+	_K(2, 2) = 1;
+	/*std::cout << _K << std::endl;*/
+}
+
+Reg3D::~Reg3D()
+{
+
+}
+
+void Reg3D::Run()
+{
+
+}

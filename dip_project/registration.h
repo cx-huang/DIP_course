@@ -19,3 +19,17 @@ private:
 	std::vector<Eigen::Vector2f> _pnt_B;
 	Eigen::MatrixXf _M;
 };
+
+class Reg3D
+{
+public:
+	Reg3D(std::string src_file_name, std::string dst_file_name);
+	~Reg3D();
+	void Run();
+private:
+	std::vector<Eigen::Vector3f> _pnt_3d_A;
+	std::vector<Eigen::Vector3f> _pnt_3d_B;
+	Eigen::Matrix3f _K;
+	Eigen::Matrix3f _R;
+	Eigen::Vector3f _t;
+};

@@ -4,3 +4,4 @@ Debug/
 
 #ignore output images in directory output
 output/project1/*.png
+output/project2/*.png
