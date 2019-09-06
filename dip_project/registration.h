@@ -4,6 +4,8 @@
 #include <vector>
 #include <opencv2\imgproc.hpp>
 #include <opencv2\highgui.hpp>
+#include <opencv2\calib3d\calib3d_c.h>	//for cvFindExtrinsicCameraParams2()
+#include <opencv2\calib3d.hpp>	//for cv::projectPoints()
 #include <Eigen>
 #include <opencv2/core/eigen.hpp>	//for cv::eigen2cv()
 #include <direct.h>	//for _mkdir()

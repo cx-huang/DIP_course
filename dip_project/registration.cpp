@@ -238,5 +238,8 @@ Reg3D::~Reg3D()
 
 void Reg3D::Run()
 {
-
+	//Reproject();
+	//cv::projectPoints();
+	//cv::solveP3P();
+	//cv::Rodrigues();
 }
