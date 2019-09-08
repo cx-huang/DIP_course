@@ -167,14 +167,14 @@ void Reg2D::Run(void)
 	cv::imwrite("output\\project1\\blend_img.png", blend_img);
 }
 
-Reg3D::Reg3D(std::string src_file_name, std::string dst_file_name)
+PoseEstimation::PoseEstimation(std::string pnt_3d_file_name, std::string pnt_2d_file_name)
 {
-	/* read data from txt file */
+	/* read data of 3d points and 2d points from txt file */
 	std::ifstream fp;
-	fp.open(src_file_name);
+	fp.open(pnt_3d_file_name);
 	if (!fp.is_open())
 	{
-		std::cout << "Cannot open file #" << src_file_name << "#" << std::endl;
+		std::cout << "Cannot open file #" << pnt_3d_file_name << "#" << std::endl;
 		return;
 	}
 	while (!fp.eof())
@@ -182,38 +182,36 @@ Reg3D::Reg3D(std::string src_file_name, std::string dst_file_name)
 		char buffer[64];
 		float x, y, z;
 		fp.getline(buffer, 64);
-		sscanf_s(buffer, "%f, %f, %f", &x, &y, &z, 30);
-		//std::cout << "x:" << x << "	y:" << y << std::endl;
-		Eigen::Vector3f tmp(x, y, z);
-		_pnt_3d_A.push_back(tmp);
+		sscanf_s(buffer, "%f, %f, %f", &x, &y, &z, 64);
+		Eigen::Vector4f tmp(x, y, z, 1);
+		_pnt_3d_homo.push_back(tmp);
 	}
-	/*std::cout << _pnt_3d_A.size() << std::endl;
-	for (int i = 0; i < _pnt_3d_A.size(); i++)
+	/*std::cout << _pnt_3d_homo.size() << std::endl;
+	for (int i = 0; i < _pnt_3d_homo.size(); i++)
 	{
-		std::cout << _pnt_3d_A[i].x() << " " << _pnt_3d_A[i].y() << " " << _pnt_3d_A[i].z() << std::endl;
+		std::cout << _pnt_3d_homo[i].x() << "	" << _pnt_3d_homo[i].y() << "	" << _pnt_3d_homo[i].z() << std::endl;
 	}*/
 	fp.close();
 
-	fp.open(dst_file_name);
+	fp.open(pnt_2d_file_name);
 	if (!fp.is_open())
 	{
-		std::cout << "Cannot open file #" << dst_file_name << "#" << std::endl;
+		std::cout << "Cannot open file #" << pnt_2d_file_name << "#" << std::endl;
 		return;
 	}
 	while (!fp.eof())
 	{
 		char buffer[64];
-		float x, y, z;
+		int x, y;
 		fp.getline(buffer, 64);
-		sscanf_s(buffer, "%f, %f, %f", &x, &y, &z, 30);
-		//std::cout << "x:" << x << "	y:" << y << std::endl;
-		Eigen::Vector3f tmp(x, y, z);
-		_pnt_3d_B.push_back(tmp);
+		sscanf_s(buffer, "%d, %d", &x, &y, 64);
+		Eigen::Vector3f tmp(x, y, 1);
+		_pnt_2d_homo.push_back(tmp);
 	}
-	/*std::cout << _pnt_3d_B.size() << std::endl;
-	for (int i = 0; i < _pnt_3d_B.size(); i++)
+	/*std::cout << _pnt_2d_homo.size() << std::endl;
+	for (int i = 0; i < _pnt_2d_homo.size(); i++)
 	{
-		std::cout << _pnt_3d_B[i].x() << " " << _pnt_3d_B[i].y() << " " << _pnt_3d_B[i].z() << std::endl;
+		std::cout << _pnt_2d_homo[i].x() << "	" << _pnt_2d_homo[i].y() << std::endl;
 	}*/
 	fp.close();
 	/* create directory for output */
@@ -231,15 +229,38 @@ Reg3D::Reg3D(std::string src_file_name, std::string dst_file_name)
 	/*std::cout << _K << std::endl;*/
 }
 
-Reg3D::~Reg3D()
+PoseEstimation::~PoseEstimation(void)
 {
 
 }
 
-void Reg3D::Run()
+void PoseEstimation::Run(void)
 {
-	//Reproject();
-	//cv::projectPoints();
-	//cv::solveP3P();
-	//cv::Rodrigues();
+	Eigen::MatrixXf M(48, 28);
+	M.setZero();
+	for (int i = 0; i < _pnt_3d_homo.size(); i++)
+	{
+		M.block<1, 4>(i * 3, 0) = _pnt_3d_homo[i].transpose();
+		M.block<1, 4>(i * 3 + 1, 4) = _pnt_3d_homo[i].transpose();
+		M.block<1, 4>(i * 3+ 2, 8) = _pnt_3d_homo[i].transpose();
+		M(i * 3, i + 12) = -_pnt_2d_homo[i].x();
+		M(i * 3 + 1, i + 12) = -_pnt_2d_homo[i].y();
+		M(i * 3 + 2, i + 12) = -1;
+	}
+	/*std::cout << M << std::endl;*/
+	Eigen::JacobiSVD<Eigen::MatrixXf> svd(M, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	Eigen::MatrixXf V = svd.matrixV();
+	/*std::cout << V.rows() << std::endl;
+	std::cout << V.cols() << std::endl;*/
+	//std::cout << V.col(V.cols() - 1) << std::endl;
+	Eigen::VectorXf V_last_col;
+	V_last_col = V.col(V.cols() - 1);
+	Eigen::MatrixXf P(3, 4);
+	P.block<1, 4>(0, 0) = V_last_col.block<4, 1>(0, 0).transpose();
+	P.block<1, 4>(1, 0) = V_last_col.block<4, 1>(4, 0).transpose();
+	P.block<1, 4>(2, 0) = V_last_col.block<4, 1>(8, 0).transpose();
+	std::cout << "matrix P:" << std::endl << P << std::endl;
+
+	Eigen::MatrixXf RT = _K.inverse() * P;
+	std::cout << "matrix RT:" << std::endl << RT << std::endl;
 }
