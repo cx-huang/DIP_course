@@ -4,17 +4,15 @@
 #include <vector>
 #include <opencv2\imgproc.hpp>
 #include <opencv2\highgui.hpp>
-#include <opencv2\calib3d\calib3d_c.h>	//for cvFindExtrinsicCameraParams2()
-#include <opencv2\calib3d.hpp>	//for cv::projectPoints()
 #include <Eigen>
 #include <opencv2/core/eigen.hpp>	//for cv::eigen2cv()
 #include <direct.h>	//for _mkdir()
 
-class Reg2D
+class Registration
 {
 public:
-	Reg2D(std::string src_file_name, std::string dst_file_name);
-	~Reg2D(void);
+	Registration(std::string src_file_name, std::string dst_file_name);
+	~Registration(void);
 	void Run(void);
 private:
 	std::vector<Eigen::Vector2f> _pnt_A;

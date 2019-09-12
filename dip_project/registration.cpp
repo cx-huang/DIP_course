@@ -1,6 +1,6 @@
 #include "registration.h"
 
-Reg2D::Reg2D(std::string src_file_name, std::string dst_file_name)
+Registration::Registration(std::string src_file_name, std::string dst_file_name)
 {
 	/* read data from txt file */
 	std::ifstream fp;
@@ -52,12 +52,12 @@ Reg2D::Reg2D(std::string src_file_name, std::string dst_file_name)
 	_mkdir("output\\project1");
 }
 
-Reg2D::~Reg2D(void)
+Registration::~Registration(void)
 {
 
 }
 
-void Reg2D::Run(void)
+void Registration::Run(void)
 {
 	/* solve M by solving over-determined equation Ax = b with least square method */
 	// 1.create matrix A and vector b
@@ -98,7 +98,7 @@ void Reg2D::Run(void)
 	_M(1, 0) = x(3);
 	_M(1, 1) = x(4);
 	_M(1, 2) = x(5);
-	//std::cout << _M << std::endl;
+	std::cout << "matrix M: " << std::endl  << _M << std::endl;
 
 	/* warp source image */
 	// 1.load source image and label skeleton points
@@ -236,31 +236,46 @@ PoseEstimation::~PoseEstimation(void)
 
 void PoseEstimation::Run(void)
 {
-	Eigen::MatrixXf M(48, 28);
-	M.setZero();
+	/* construct matrix A */
+	Eigen::MatrixXf A(48, 12);
+	A.setZero();
+	Eigen::VectorXf b(48);
+	b.setZero();
 	for (int i = 0; i < _pnt_3d_homo.size(); i++)
 	{
-		M.block<1, 4>(i * 3, 0) = _pnt_3d_homo[i].transpose();
-		M.block<1, 4>(i * 3 + 1, 4) = _pnt_3d_homo[i].transpose();
-		M.block<1, 4>(i * 3+ 2, 8) = _pnt_3d_homo[i].transpose();
-		M(i * 3, i + 12) = -_pnt_2d_homo[i].x();
-		M(i * 3 + 1, i + 12) = -_pnt_2d_homo[i].y();
-		M(i * 3 + 2, i + 12) = -1;
+		A.block<1, 4>(i * 3, 4) = -_pnt_3d_homo[i].transpose();
+		A.block<1, 4>(i * 3, 8) = _pnt_2d_homo[i].y() * _pnt_3d_homo[i].transpose();
+		A.block<1, 4>(i * 3 + 1, 0) = _pnt_3d_homo[i].transpose();
+		A.block<1, 4>(i * 3 + 1, 8) = -_pnt_2d_homo[i].x() * _pnt_3d_homo[i].transpose();
+		A.block<1, 4>(i * 3 + 2, 0) = -_pnt_2d_homo[i].y() * _pnt_3d_homo[i].transpose();
+		A.block<1, 4>(i * 3 + 2, 4) = _pnt_2d_homo[i].x() * _pnt_3d_homo[i].transpose();
 	}
-	/*std::cout << M << std::endl;*/
-	Eigen::JacobiSVD<Eigen::MatrixXf> svd(M, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	Eigen::MatrixXf V = svd.matrixV();
-	/*std::cout << V.rows() << std::endl;
-	std::cout << V.cols() << std::endl;*/
-	//std::cout << V.col(V.cols() - 1) << std::endl;
-	Eigen::VectorXf V_last_col;
-	V_last_col = V.col(V.cols() - 1);
+	//std::cout << "matrix A:" << std::endl << A << std::endl;
+	/* solve x */
+	Eigen::MatrixXf AT = A.transpose();
+	Eigen::EigenSolver<Eigen::MatrixXf> es(AT * A);
+	Eigen::MatrixXf D = es.pseudoEigenvalueMatrix();
+	Eigen::MatrixXf V = es.pseudoEigenvectors();
+	/*std::cout << "The eigenvalue matrix D is:" << std::endl << D << std::endl;
+	std::cout << "The eigenvector matrix V is:" << std::endl << V << std::endl;*/
+	int min_eig_val_idx = 0;
+	for (int i = 0; i < D.rows(); i++)
+	{	
+		if (D(i, i) < D(min_eig_val_idx, min_eig_val_idx))
+			min_eig_val_idx = i;
+	}
+	//std::cout << min_eig_val_idx << std::endl;
+	//std::cout << "solution:" << std::endl << V.row(min_eig_val_idx).transpose() << std::endl;
 	Eigen::MatrixXf P(3, 4);
-	P.block<1, 4>(0, 0) = V_last_col.block<4, 1>(0, 0).transpose();
-	P.block<1, 4>(1, 0) = V_last_col.block<4, 1>(4, 0).transpose();
-	P.block<1, 4>(2, 0) = V_last_col.block<4, 1>(8, 0).transpose();
-	std::cout << "matrix P:" << std::endl << P << std::endl;
-
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			P(i, j) = (V.row(min_eig_val_idx).transpose())(i * 3 + j);
+		}
+	}
+	/* compute [R T] */
 	Eigen::MatrixXf RT = _K.inverse() * P;
-	std::cout << "matrix RT:" << std::endl << RT << std::endl;
+	std::cout << "R:" << std::endl << RT.block<3, 3>(0, 0) << std::endl;
+	std::cout << "T:" << std::endl << RT.block<3, 1>(0, 3) << std::endl;
 }
